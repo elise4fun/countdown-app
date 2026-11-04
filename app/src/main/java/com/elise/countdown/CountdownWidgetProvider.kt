@@ -119,7 +119,7 @@ class CountdownWidgetProvider : AppWidgetProvider() {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, CountdownWidgetProvider::class.java))
             val now = System.currentTimeMillis()
-            val next = ids.mapNotNull { Store.widgetCountdown(context, it)?.target }
+            val next = ids.toList().mapNotNull { Store.widgetCountdown(context, it)?.target }
                 .filter { it > now }
                 .minOrNull()
             val i = Intent(context, CountdownWidgetProvider::class.java).setAction(ACTION_TICK)
