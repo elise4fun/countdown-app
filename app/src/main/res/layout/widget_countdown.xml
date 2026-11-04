@@ -35,6 +35,16 @@
         android:textSize="20sp"
         android:textStyle="bold" />
 
+    <Chronometer
+        android:id="@+id/w_chrono"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="#FFD54F"
+        android:textSize="22sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <TextView
         android:id="@+id/w_date"
         android:layout_width="wrap_content"

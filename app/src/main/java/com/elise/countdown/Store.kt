@@ -85,7 +85,7 @@ object Fmt {
         val hours = (mins % 1440) / 60
         val m = mins % 60
         return when {
-            days > 0 -> "$days j $hours h"
+            days > 0 -> "$days j $hours h $m min"
             hours > 0 -> "$hours h $m min"
             else -> "${if (m < 1) 1 else m} min"
         }

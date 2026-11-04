@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.SystemClock
+import android.view.View
 import android.widget.RemoteViews
 
 class CountdownWidgetProvider : AppWidgetProvider() {
@@ -71,6 +72,8 @@ class CountdownWidgetProvider : AppWidgetProvider() {
             if (c == null) {
                 views.setTextViewText(R.id.w_emoji, "⏳")
                 views.setTextViewText(R.id.w_name, "Touche pour choisir un compte à rebours")
+                views.setViewVisibility(R.id.w_chrono, View.GONE)
+                views.setViewVisibility(R.id.w_remaining, View.VISIBLE)
                 views.setTextViewText(R.id.w_remaining, "")
                 views.setTextViewText(R.id.w_date, "")
                 val cfg = Intent(context, WidgetConfigActivity::class.java)
@@ -82,7 +85,23 @@ class CountdownWidgetProvider : AppWidgetProvider() {
             } else {
                 views.setTextViewText(R.id.w_emoji, c.emoji)
                 views.setTextViewText(R.id.w_name, c.name)
-                views.setTextViewText(R.id.w_remaining, Fmt.remaining(c.target))
+                val diff = c.target - System.currentTimeMillis()
+                if (diff > 0 && diff < 24L * 3600 * 1000) {
+                    // Moins d'un jour : chronomètre natif, mis à jour chaque seconde par Android
+                    views.setViewVisibility(R.id.w_remaining, View.GONE)
+                    views.setViewVisibility(R.id.w_chrono, View.VISIBLE)
+                    views.setChronometerCountDown(R.id.w_chrono, true)
+                    views.setChronometer(
+                        R.id.w_chrono,
+                        SystemClock.elapsedRealtime() + diff,
+                        null,
+                        true
+                    )
+                } else {
+                    views.setViewVisibility(R.id.w_chrono, View.GONE)
+                    views.setViewVisibility(R.id.w_remaining, View.VISIBLE)
+                    views.setTextViewText(R.id.w_remaining, Fmt.remaining(c.target))
+                }
                 views.setTextViewText(R.id.w_date, Fmt.date(c.target))
                 val open = Intent(context, MainActivity::class.java)
                 views.setOnClickPendingIntent(
@@ -91,6 +110,24 @@ class CountdownWidgetProvider : AppWidgetProvider() {
                 )
             }
             mgr.updateAppWidget(widgetId, views)
+            scheduleTargetAlarm(context)
+        }
+
+        // Réveil à l'échéance la plus proche, pour que le chronomètre ne passe pas en négatif
+        private fun scheduleTargetAlarm(context: Context) {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+            val mgr = AppWidgetManager.getInstance(context)
+            val ids = mgr.getAppWidgetIds(ComponentName(context, CountdownWidgetProvider::class.java))
+            val now = System.currentTimeMillis()
+            val next = ids.mapNotNull { Store.widgetCountdown(context, it)?.target }
+                .filter { it > now }
+                .minOrNull()
+            val i = Intent(context, CountdownWidgetProvider::class.java).setAction(ACTION_TICK)
+            val pi = PendingIntent.getBroadcast(
+                context, 1, i,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (next == null) am.cancel(pi) else am.set(AlarmManager.RTC, next + 1000, pi)
         }
     }
 }
